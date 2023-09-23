@@ -2,6 +2,11 @@ use std::{borrow::Borrow, collections::BTreeMap, rc::Rc};
 
 //
 
+pub mod engine;
+pub mod syntax;
+
+//
+
 pub struct State {
     vars: BTreeMap<Rc<str>, Value>,
 }
@@ -25,6 +30,30 @@ impl State {
         Rc<str>: Borrow<Q>,
     {
         self.vars.get(key).cloned().unwrap_or(Value::Nil)
+    }
+
+    pub fn run<'a, S>(&mut self, relua: S) -> Result<(), &'static str>
+    where
+        S: Into<Script<'a>>,
+    {
+        match relua.into() {
+            Script::Interpret(script) => syntax::parse(script),
+        };
+
+        Ok(())
+    }
+}
+
+//
+
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub enum Script<'a> {
+    Interpret(&'a str),
+}
+
+impl<'a> From<&'a str> for Script<'a> {
+    fn from(value: &'a str) -> Self {
+        Script::Interpret(value)
     }
 }
 

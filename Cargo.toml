@@ -1,8 +1,12 @@
-[package]
-name = "relua"
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+resolver = "2"
+members = ["repl", "relua"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
+[workspace.dependencies]
+tracing = "0.1"
