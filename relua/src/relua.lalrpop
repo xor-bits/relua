@@ -1,0 +1,111 @@
+use core::str::FromStr;
+use crate::{
+    Value,
+    syntax::{Chunk, Stat, Assign, VarList, ExpList, Var, Exp, FnCall, Args}
+};
+use lalrpop_util::ParseError;
+
+// Mostly the same as: https://www.lua.org/manual/5.1/manual.html
+
+grammar;
+
+extern {
+    type Error = String;
+}
+
+pub Block: Chunk = Chunk;
+
+pub Chunk: Chunk = {
+    (<Stat> ";"?)* => {
+        Chunk {
+            statements: <>,
+        }
+    }
+};
+
+pub Stat: Stat = {
+    // "do" <Chunk> "end"
+    <varlist:VarList> "=" <explist:ExpList> => {
+        Stat::Assign(Assign {
+            varlist,
+            explist,
+        })
+    },
+    FnCall => Stat::FnCall(<>),
+};
+
+pub VarList: VarList = {
+    Comma<Var> => VarList(<>),
+};
+
+pub ExpList: ExpList = {
+    Comma<Exp> => ExpList(<>),
+};
+
+pub Var: Var = {
+    r"[a-zA-Z_][\w_]*" => Var(<>.into()),
+};
+
+pub Exp: Exp = {
+    "nil" => Exp::Value(Value::Nil),
+    "false" => Exp::Value(Value::Boolean(false)),
+    "true" => Exp::Value(Value::Boolean(true)),
+    Number => Exp::Value(Value::Number(<>)),
+    String => Exp::Value(Value::String(<>)),
+    // TODO: "..." | function
+    PrefixExp,
+    // TODO: prefixexp | tableconstructor | exp binop exp | unop exp
+};
+
+pub PrefixExp: Exp = {
+    Var => Exp::Var(<>),
+    FnCall => Exp::FnCall(<>),
+    "(" <e:Exp> ")" => e,
+};
+
+pub FnCall: FnCall = {
+    // TODO: local ambiguity with
+    // `x() ; (function() end)()` and `x() (function() end)()`
+    //
+    // its read as either `x() ; (function() end)()`
+    // or `((x())(function() end()))()`
+    // <func:PrefixExp> <args:Args> => FnCall {
+    <func:Var> <args:Args> => FnCall {
+        // func: Box::new(func),
+        func,
+        args,
+    },
+    // TODO: prefixexp `:´ Name args
+};
+
+pub Args: Args = {
+    "(" <explist:ExpList> ")" => Args {
+        explist,
+    },
+    // TODO: tableconstructor
+    String => Args {
+        explist: ExpList(vec![Exp::Value(Value::String(<>))])
+    },
+};
+
+Comma<T>: Vec<T> = {
+    <mut v: (<T> ",")* > <e:T> => {
+        v.push(e);
+        v
+    },
+};
+
+pub Number: f64 = {
+    r"\d*\.?\d+" =>? f64::from_str(<>)
+        .map_err(|err| ParseError::User {
+            error: format!("{err}"),
+        }),
+    r"\d+\." =>? f64::from_str(<>)
+        .map_err(|err| ParseError::User {
+            error: format!("{err}"),
+        }),
+};
+
+pub String: String = {
+    r#""[^"]*""# => <>.trim_matches('"').into(),
+};

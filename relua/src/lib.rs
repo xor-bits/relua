@@ -1,48 +1,12 @@
-use std::{borrow::Borrow, collections::BTreeMap, rc::Rc};
+use core::fmt;
+use std::rc::Rc;
+
+pub use engine::interpreter::State;
 
 //
 
 pub mod engine;
 pub mod syntax;
-
-//
-
-pub struct State {
-    vars: BTreeMap<Rc<str>, Value>,
-}
-
-//
-
-impl State {
-    pub const fn new() -> Self {
-        Self {
-            vars: BTreeMap::new(),
-        }
-    }
-
-    pub fn set(&mut self, var: impl Into<Rc<str>>, val: impl Into<Value>) {
-        self.vars.insert(var.into(), val.into());
-    }
-
-    pub fn get<Q>(&self, key: &Q) -> Value
-    where
-        Q: ?Sized + Ord,
-        Rc<str>: Borrow<Q>,
-    {
-        self.vars.get(key).cloned().unwrap_or(Value::Nil)
-    }
-
-    pub fn run<'a, S>(&mut self, relua: S) -> Result<(), &'static str>
-    where
-        S: Into<Script<'a>>,
-    {
-        match relua.into() {
-            Script::Interpret(script) => syntax::parse(script),
-        };
-
-        Ok(())
-    }
-}
 
 //
 
@@ -59,19 +23,60 @@ impl<'a> From<&'a str> for Script<'a> {
 
 //
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Clone)]
+pub struct Function(Rc<dyn Fn(Vec<Value>) -> Value>);
+
+impl fmt::Debug for Function {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "<>")
+    }
+}
+
+impl<F: Fn(Vec<Value>) -> Value + 'static> From<F> for Function {
+    fn from(value: F) -> Self {
+        Function(Rc::new(value) as _)
+    }
+}
+
+//
+
+#[derive(Debug, Clone, Default)]
 pub enum Value {
+    #[default]
     Nil,
     Boolean(bool),
     Number(f64),
     String(String),
+    Function(Function),
     // Userdata,
     // Function,
     // Thread,
     // Table,
 }
 
-//
+impl Value {
+    pub const fn as_type(&self) -> &'static str {
+        match self {
+            Value::Nil => "nil",
+            Value::Boolean(_) => "boolean",
+            Value::Number(_) => "number",
+            Value::String(_) => "string",
+            Value::Function(_) => "function",
+        }
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Nil => write!(f, "nil"),
+            Value::Boolean(v) => write!(f, "{v}"),
+            Value::Number(v) => write!(f, "{v}"),
+            Value::String(v) => write!(f, "{v:?}"),
+            Value::Function(_) => write!(f, "<function>"),
+        }
+    }
+}
 
 impl From<()> for Value {
     fn from(_: ()) -> Self {
@@ -170,3 +175,9 @@ impl From<String> for Value {
         Self::Nil
     }
 } */
+
+impl<F: Into<Function>> From<F> for Value {
+    fn from(v: F) -> Self {
+        Self::Function(v.into())
+    }
+}

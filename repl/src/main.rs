@@ -1,5 +1,5 @@
 use anyhow::Result;
-use relua::State;
+use relua::{State, Value};
 use rustyline::{error::ReadlineError, DefaultEditor};
 
 //
@@ -8,6 +8,18 @@ fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
     let mut state = State::new();
+    state.set("print", |l: Vec<Value>| {
+        let Some((last, list)) = l.split_last() else {
+            return Value::Nil;
+        };
+
+        for v in list {
+            print!("{v}, ");
+        }
+        println!("{last}");
+
+        Value::Nil
+    });
 
     let mut rl = DefaultEditor::new()?;
     _ = rl.load_history(".repl-history");
