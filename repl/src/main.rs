@@ -7,6 +7,8 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
+    println!("ReLua {}", env!("CARGO_PKG_VERSION"));
+
     let mut state = State::new();
     state.set("print", |l: Vec<Value>| {
         let Some((last, list)) = l.split_last() else {
