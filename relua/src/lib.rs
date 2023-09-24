@@ -32,9 +32,9 @@ impl fmt::Debug for Function {
     }
 }
 
-impl<F: Fn(Vec<Value>) -> Value + 'static> From<F> for Function {
+impl<F: Fn(Vec<Value>) -> R + 'static, R: Into<Value>> From<F> for Function {
     fn from(value: F) -> Self {
-        Function(Rc::new(value) as _)
+        Function(Rc::new(move |args| value(args).into()) as _)
     }
 }
 
@@ -62,6 +62,82 @@ impl Value {
             Value::Number(_) => "number",
             Value::String(_) => "string",
             Value::Function(_) => "function",
+        }
+    }
+
+    /// Returns `true` if the value is [`Nil`].
+    ///
+    /// [`Nil`]: Value::Nil
+    #[must_use]
+    pub const fn is_nil(&self) -> bool {
+        matches!(self, Self::Nil)
+    }
+
+    /// Returns `true` if the value is [`Boolean`].
+    ///
+    /// [`Boolean`]: Value::Boolean
+    #[must_use]
+    pub const fn is_boolean(&self) -> bool {
+        matches!(self, Self::Boolean(..))
+    }
+
+    /// Returns `true` if the value is [`Number`].
+    ///
+    /// [`Number`]: Value::Number
+    #[must_use]
+    pub const fn is_number(&self) -> bool {
+        matches!(self, Self::Number(..))
+    }
+
+    /// Returns `true` if the value is [`String`].
+    ///
+    /// [`String`]: Value::String
+    #[must_use]
+    pub const fn is_string(&self) -> bool {
+        matches!(self, Self::String(..))
+    }
+
+    /// Returns `true` if the value is [`Function`].
+    ///
+    /// [`Function`]: Value::Function
+    #[must_use]
+    pub const fn is_function(&self) -> bool {
+        matches!(self, Self::Function(..))
+    }
+
+    #[must_use]
+    pub const fn as_boolean(&self) -> Option<&bool> {
+        if let Self::Boolean(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub const fn as_number(&self) -> Option<&f64> {
+        if let Self::Number(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub const fn as_string(&self) -> Option<&String> {
+        if let Self::String(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub const fn as_function(&self) -> Option<&Function> {
+        if let Self::Function(v) = self {
+            Some(v)
+        } else {
+            None
         }
     }
 }

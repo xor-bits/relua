@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    syntax::{self, Assign, Chunk, Exp, FnCall, Stat, Var},
+    syntax::{self, Assign, Chunk, Exp, ExpList, FnCall, Stat, Var},
     Script, Value,
 };
 
@@ -116,15 +116,22 @@ pub fn run_assign(state: &mut State, assign: Assign) {
         "varlist length should be the same as explist length"
     );
 
-    for (var, exp) in assign
+    for (var, val) in assign
         .varlist
         .0
         .into_iter()
-        .zip(assign.explist.0.into_iter())
+        .zip(run_explist(state, assign.explist))
     {
-        let result = run_exp(state, exp);
-        *run_var(state, var) = result;
+        *run_var(state, var) = val;
     }
+}
+
+pub fn run_explist(state: &mut State, explist: ExpList) -> Vec<Value> {
+    explist
+        .0
+        .into_iter()
+        .map(|exp| run_exp(state, exp))
+        .collect()
 }
 
 pub fn run_var(state: &mut State, var: Var) -> &mut Value {

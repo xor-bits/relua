@@ -25,7 +25,7 @@ pub Chunk: Chunk = {
 
 pub Stat: Stat = {
     // "do" <Chunk> "end"
-    <varlist:VarList> "=" <explist:ExpList> => {
+    <varlist:VarListNonEmpty> "=" <explist:ExpListNonEmpty> => {
         Stat::Assign(Assign {
             varlist,
             explist,
@@ -38,8 +38,16 @@ pub VarList: VarList = {
     Comma<Var> => VarList(<>),
 };
 
+pub VarListNonEmpty: VarList = {
+    CommaNonEmpty<Var> => VarList(<>),
+};
+
 pub ExpList: ExpList = {
     Comma<Exp> => ExpList(<>),
+};
+
+pub ExpListNonEmpty: ExpList = {
+    CommaNonEmpty<Exp> => ExpList(<>),
 };
 
 pub Var: Var = {
@@ -89,7 +97,15 @@ pub Args: Args = {
 };
 
 Comma<T>: Vec<T> = {
-    <mut v: (<T> ",")* > <e:T> => {
+    <mut v: (<T> ",")*> <e:T> => {
+        v.push(e);
+        v
+    },
+    => vec![],
+};
+
+CommaNonEmpty<T>: Vec<T> = {
+    <e:T> <mut v: ("," <T>)+> => {
         v.push(e);
         v
     },
