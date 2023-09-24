@@ -48,3 +48,11 @@ pub fn test_swap() {
 
     lua.run("x, y = 1, 2 x, y = y, x test_swap(x, y)").unwrap();
 }
+
+#[test]
+#[should_panic]
+pub fn test_syntax_error() {
+    let mut lua = State::new();
+
+    lua.run("invalid // syntax").unwrap();
+}
